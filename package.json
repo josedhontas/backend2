@@ -1,6 +1,10 @@
 {
   "name": "projeto_rbm",
   "version": "1.0.0",
+  "engines": {
+    "node": "20.14.0",
+    "npm": "10.8.1"
+  },
   "main": "index.js",
   "dependencies": {
     "@types/bcrypt": "^5.0.2",
