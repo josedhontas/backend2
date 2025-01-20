@@ -142,6 +142,7 @@ const deleteStudent = async (id: number) => {
   await dbQuery(`DELETE FROM students WHERE id = ?`, [id]);
 };
 
+/*
 export const getSankeyData = async (period_init: string, period_end: string) => {
   // Consulta SQL para obter os dados acumulados
   const query = `
@@ -202,6 +203,7 @@ ORDER BY
   // Retorna o formato esperado pelo gráfico Sankey
   return { nodes, links };
 };
+*/
 
 
 
@@ -215,6 +217,6 @@ export const studentModel = {
   getCurriculumData,
   getBoxPlot,
   getViolinPlot,
-  getSankeyData
+  //getSankeyData
 
 };
