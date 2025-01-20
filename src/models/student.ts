@@ -51,6 +51,8 @@ const getStudent = async (id: number) => {
   return retorno[0] as Student | undefined;
 };
 
+
+
 const getWorkloadPending = async (course_id: number, period_init: string, period_end: string) => {
   const retorno = await dbQuery(
     `SELECT COALESCE(mc, 0) AS mc, (required_component_workload - fulfilled_component_workload) AS PendingWorkload FROM curriculums WHERE course_id = ? 
@@ -140,82 +142,68 @@ const deleteStudent = async (id: number) => {
   await dbQuery(`DELETE FROM students WHERE id = ?`, [id]);
 };
 
-const getSankeyData = async (
-  period_init: string,
-  period_end: string
-): Promise<{
-  nodes: { name: string }[];
-  links: { source: number; target: number; value: number }[];
-  periods: string[];
-}> => {
-  const sankeyQuery = `
-    SELECT 
-      curriculums.initial_period AS period, 
-      courses.name AS course_name, 
-      COUNT(students.id) AS number_of_students
-    FROM 
-      curriculums
-    JOIN 
-      students ON curriculums.student_id = students.id
-    JOIN 
-      courses ON curriculums.course_id = courses.id
-    WHERE 
-      curriculums.initial_period BETWEEN ? AND ?
-    GROUP BY 
-      curriculums.initial_period, courses.name
-    ORDER BY 
-      curriculums.initial_period, courses.name;
+export const getSankeyData = async (period_init: string, period_end: string) => {
+  // Consulta SQL para obter os dados acumulados
+  const query = `
+SELECT 
+    c.name AS course_name,
+    cr.initial_period AS period,
+    COUNT(CASE WHEN cr.initial_period IS NOT NULL THEN cr.id END) AS students_in,
+    COUNT(CASE WHEN cr.leaving_date IS NOT NULL AND cr.leaving_reason = 'ABANDONO' THEN cr.id END) AS students_evaded,
+    SUM(COUNT(CASE WHEN cr.initial_period IS NOT NULL THEN cr.id END)) 
+        OVER (PARTITION BY c.name ORDER BY cr.initial_period) AS cumulative_students_in,
+    SUM(COUNT(CASE WHEN cr.leaving_date IS NOT NULL AND cr.leaving_reason = 'ABANDONO' THEN cr.id END)) 
+        OVER (PARTITION BY c.name ORDER BY cr.initial_period) AS cumulative_students_evaded
+FROM 
+    curriculums cr
+JOIN 
+    courses c ON cr.course_id = c.id
+WHERE 
+    cr.initial_period BETWEEN '2016.1' AND '2018.2'
+GROUP BY 
+    c.id, c.name, cr.initial_period
+ORDER BY 
+    c.name, cr.initial_period;
+
   `;
 
-  const result = await dbQuery(sankeyQuery, [period_init, period_end]);
+  // Executa a consulta
+  const retorno = await dbQuery(query, [period_init, period_end]);
 
-  const nodes: { [key: string]: number } = {};
-  const rawLinks: { source: number; target: number; value: number }[] = [];
-  const periodsSet = new Set<string>();
+  // Organizando os dados para o gráfico Sankey
+  const nodes: { name: string }[] = [];
+  const links: { source: number; target: number; value: number }[] = [];
+  const nodeIndices: { [key: string]: number } = {}; // Mapeamento de cursos para índices de nós
+  let position = 0;
 
-  result.forEach((row: { period: string; course_name: string; number_of_students: number }) => {
-    const { period, course_name, number_of_students } = row;
-    periodsSet.add(period);
+  // Itera sobre os dados para gerar nós e links
+  for (const row of retorno) {
+    const course_name = row.course_name;
+    const cumulative_students_in = row.cumulative_students_in;
 
-    const courseNodeName = `${course_name} (${period})`;
-    if (!(courseNodeName in nodes)) {
-      nodes[courseNodeName] = Object.keys(nodes).length;
+    // Adiciona o nó se ele ainda não foi adicionado
+    if (!(course_name in nodeIndices)) {
+      nodeIndices[course_name] = position;
+      nodes.push({ name: course_name });
+      position++;
     }
 
-    const evasionNodeName = `Evasão (${period})`;
-    if (!(evasionNodeName in nodes)) {
-      nodes[evasionNodeName] = Object.keys(nodes).length;
+    // Cria links entre períodos consecutivos do mesmo curso
+    const currentIndex = nodeIndices[course_name];
+    if (links.length > 0 && currentIndex !== position - 1) {
+      links.push({
+        source: currentIndex,
+        target: currentIndex + 1,
+        value: cumulative_students_in,
+      });
     }
+  }
 
-    rawLinks.push({
-      source: nodes[courseNodeName],
-      target: nodes[evasionNodeName],
-      value: number_of_students,
-    });
-  });
-
-  const formattedNodes = Object.keys(nodes).map(name => ({ name }));
-
-  const groupedLinks = rawLinks.reduce((acc, link) => {
-    const existingLink = acc.find(
-      (l) => l.source === link.source && l.target === link.target
-    );
-    if (existingLink) {
-      existingLink.value += link.value;
-    } else {
-      acc.push(link);
-    }
-    return acc;
-  }, [] as { source: number; target: number; value: number }[]);
-
-  const periods = Array.from(periodsSet).sort();
-
-  return {
-    nodes: formattedNodes,
-    links: groupedLinks,
-    periods,
-  };
+  // Retorna o formato esperado pelo gráfico Sankey
+  return { nodes, links };
 };
+
+
 
 export const studentModel = {
   insertStudent,
@@ -227,5 +215,6 @@ export const studentModel = {
   getCurriculumData,
   getBoxPlot,
   getViolinPlot,
-  getSankeyData,
+  getSankeyData
+
 };
