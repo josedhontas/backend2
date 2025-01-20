@@ -102,9 +102,10 @@ const getSankeyData = (req: Request, res: Response) => {
   const period_init = req.params.period_init;
   const period_end = req.params.period_end;
 
-  studentModel.getSankeyData(course_id, period_init, period_end)
+  /*studentModel.getSankeyData(course_id, period_init)
     .then(data => res.json(data))
     .catch(err => internalServerError(res, err));
+  */
 };
 
 export const studentController = {
@@ -117,5 +118,5 @@ export const studentController = {
   getCurriculumData,
   getBoxPlot,
   getViolinPlot,
-  getSankeyData, // Novo método exportado
 };
+
