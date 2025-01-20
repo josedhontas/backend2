@@ -96,7 +96,7 @@ const getViolinPlot = (req: Request, res: Response) => {
     .catch(err => internalServerError(res, err));
 };
 
-// Novo método para Sankey
+/* Novo método para Sankey
 const getSankeyData = (req: Request, res: Response) => {
   const course_id = parseInt(req.params.course_id);
   const period_init = req.params.period_init;
@@ -106,7 +106,6 @@ const getSankeyData = (req: Request, res: Response) => {
     .then(data => res.json(data))
     .catch(err => internalServerError(res, err));
   */
-};
 
 export const studentController = {
   insertStudent,
