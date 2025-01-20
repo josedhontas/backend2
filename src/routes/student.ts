@@ -10,7 +10,7 @@ studentRouter.get('/workload/:course_id/:period_init/:period_end', userControlle
 studentRouter.get('/bolha/:course_id/:period_init/:period_end', userController.verifyToken, studentController.getCurriculumData)
 studentRouter.get('/boxplot/:course_id', userController.verifyToken, studentController.getBoxPlot)
 studentRouter.get('/violinplot/:course_id/:period_init/:period_end', userController.verifyToken, studentController.getViolinPlot)
-studentRouter.get('/sankey/:period_init/:period_end', userController.verifyToken, studentController.getSankeyData)
+//studentRouter.get('/sankey/:period_init/:period_end', userController.verifyToken, studentController.getSankeyData)
 
 
 //studentRouter.put('/:id', studentController.updateStudent)
